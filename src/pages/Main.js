@@ -4,11 +4,12 @@ import MapView, { Marker, Callout } from 'react-native-maps';
 import { requestPermissionsAsync, getCurrentPositionAsync } from 'expo-location';
 import { MaterialIcons } from '@expo/vector-icons';
 
-import '../services/api';
+import api from '../services/api';
 
 function Main({ navigation }) {
   const [devs, setDevs] = useState([]);
   const [currentRegion, setCurrentRegion] = useState(null);
+  const [techs, setTechs] = useState('');
 
   useEffect(() => {
     async function loadInitialPosition(){
@@ -39,12 +40,17 @@ function Main({ navigation }) {
       params: {
         latitude,
         longitude,
-        techs: 'PHP'
+        techs
       }
     });
-
-    setDevs(response.data);
+    
+    setDevs(response.data.devs);
   }
+
+  function handleRegionChanged(region) {
+    setCurrentRegion(region);
+  }
+  
 
   if(!currentRegion){
     return null;
@@ -52,20 +58,31 @@ function Main({ navigation }) {
 
   return (
   <>
-  <MapView initialRegion={currentRegion} style={style.map}>
-    <Marker coordinate={{ latitude: currentRegion.latitude, longitude: currentRegion.longitude }}>
-      <Image style={style.avatar} source={{ uri: 'https://avatars0.githubusercontent.com/u/6667778?s=460&v=4'}}/>
+  <MapView 
+    onRegionChangeComplete={handleRegionChanged} 
+    initialRegion={currentRegion} 
+    style={style.map}
+  >
+    {devs.map(dev => (
+      <Marker 
+      key={dev._id} 
+      coordinate={{ 
+        longitude: dev.location.coordinates[0], 
+        latitude: dev.location.coordinates[1] 
+      }}>
+      <Image style={style.avatar} source={{ uri: dev.avatar_url }}/>
 
       <Callout onPress={() => {
-        navigation.navigate('Profile', { git_username: 'GabrielGQA' })
+        navigation.navigate('Profile', { git_username: dev.git_username })
       }}>
         <View style={style.callout}>
-          <Text style={style.devName}>Gabriel Almeida</Text>
-          <Text style={style.devBio}>Full Stack Developer - PHP, Ruby, JS</Text>
-          <Text style={style.devTechs}>PHP, JS, Rails</Text>
+          <Text style={style.devName}>{dev.name}</Text>
+          <Text style={style.devBio}>{dev.bio}</Text>
+          <Text style={style.devTechs}>{dev.techs.join(', ')}</Text>
         </View>
       </Callout>
     </Marker>
+    ))}
   </MapView>
 
   <View style={style.searchForm}>
@@ -75,12 +92,13 @@ function Main({ navigation }) {
         placeholderTextColor="#999"
         autoCapitalize="words"
         autoCorrect={false}
+        value={techs}
+        onChangeText={setTechs}
       />
 
-      <TouchableOpacity onPress={() => {}} style={style.loadButton}>
+      <TouchableOpacity onPress={loadDevs} style={style.loadButton}>
         <MaterialIcons name="my-location" size={20} color="#FFF" />
       </TouchableOpacity>
-
   </View>
   </>
   );
